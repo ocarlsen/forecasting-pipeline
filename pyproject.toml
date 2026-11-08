@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "forecasting-pipeline"
+version = "0.1.0"
+description = "Owen Carlsen's ForecastBench entry: raw/control/platt forecast generation, backtesting, and submission tooling."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Owen Carlsen" }]
+dependencies = [
+    "anthropic>=0.60",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+fbe = "fbe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["fbe*"]

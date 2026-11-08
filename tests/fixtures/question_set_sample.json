@@ -1,0 +1,97 @@
+{
+  "forecast_due_date": "2027-01-01",
+  "question_set": "2027-01-01-llm.json",
+  "questions": [
+    {
+      "id": [
+        "combo-a",
+        "combo-b"
+      ],
+      "source": "manifold",
+      "question": "Combination question (should be dropped).",
+      "resolution_criteria": "N/A",
+      "background": "N/A",
+      "market_info_open_datetime": "N/A",
+      "market_info_close_datetime": "N/A",
+      "market_info_resolution_criteria": "N/A",
+      "url": "N/A",
+      "freeze_datetime": "2025-02-20T00:00:00+00:00",
+      "freeze_datetime_value": "N/A",
+      "freeze_datetime_value_explanation": "N/A",
+      "source_intro": "N/A",
+      "combination_of": [],
+      "resolution_dates": "N/A"
+    },
+    {
+      "id": "mkt-1",
+      "source": "manifold",
+      "question": "Will the fixture market question mkt-1 resolve YES?",
+      "resolution_criteria": "Resolves YES if the fixture says so.",
+      "background": "A fixture market question for tests.",
+      "market_info_open_datetime": "2024-01-01T00:00:00+00:00",
+      "market_info_close_datetime": "2030-01-01T00:00:00+00:00",
+      "url": "https://example.com/mkt-1",
+      "freeze_datetime": "2025-02-20T00:00:00+00:00",
+      "freeze_datetime_value": "0.6",
+      "freeze_datetime_value_explanation": "The market value.",
+      "source_intro": "N/A",
+      "combination_of": "N/A",
+      "resolution_dates": "N/A"
+    },
+    {
+      "id": "mkt-2",
+      "source": "kalshi",
+      "question": "Will the fixture market question mkt-2 resolve YES?",
+      "resolution_criteria": "Resolves YES if the fixture says so.",
+      "background": "A second fixture market question for tests.",
+      "market_info_open_datetime": "2024-01-01T00:00:00+00:00",
+      "market_info_close_datetime": "2030-01-01T00:00:00+00:00",
+      "url": "https://example.com/mkt-2",
+      "freeze_datetime": "2025-02-20T00:00:00+00:00",
+      "freeze_datetime_value": "0.3",
+      "freeze_datetime_value_explanation": "The market value.",
+      "source_intro": "N/A",
+      "combination_of": "N/A",
+      "resolution_dates": "N/A"
+    },
+    {
+      "id": "ds-1",
+      "source": "acled",
+      "question": "Will there be a fixture event in {forecast_due_date} to {resolution_date}?",
+      "resolution_criteria": "Resolves to the fixture dataset value.",
+      "background": "A fixture dataset question for tests.",
+      "market_info_open_datetime": "N/A",
+      "market_info_close_datetime": "N/A",
+      "market_info_resolution_criteria": "N/A",
+      "url": "https://example.com/ds-1",
+      "freeze_datetime": "2025-02-20T00:00:00+00:00",
+      "freeze_datetime_value": "4.0",
+      "freeze_datetime_value_explanation": "Fixture last observed value.",
+      "source_intro": "N/A",
+      "combination_of": "N/A",
+      "resolution_dates": [
+        "2027-01-08",
+        "2027-02-01"
+      ]
+    },
+    {
+      "id": "ds-2",
+      "source": "acled",
+      "question": "Will there be another fixture event in {forecast_due_date} to {resolution_date}?",
+      "resolution_criteria": "Resolves to the fixture dataset value.",
+      "background": "A second fixture dataset question for tests.",
+      "market_info_open_datetime": "N/A",
+      "market_info_close_datetime": "N/A",
+      "market_info_resolution_criteria": "N/A",
+      "url": "https://example.com/ds-2",
+      "freeze_datetime": "2025-02-20T00:00:00+00:00",
+      "freeze_datetime_value": "1.0",
+      "freeze_datetime_value_explanation": "Fixture last observed value.",
+      "source_intro": "N/A",
+      "combination_of": "N/A",
+      "resolution_dates": [
+        "2027-01-08"
+      ]
+    }
+  ]
+}

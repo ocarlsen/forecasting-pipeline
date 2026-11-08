@@ -1,0 +1,54 @@
+{
+  "forecast_due_date": "2027-01-01",
+  "question_set": "2027-01-01-llm.json",
+  "resolutions": [
+    {
+      "id": ["combo-a", "combo-b"],
+      "source": "manifold",
+      "direction": [1, 1],
+      "resolution_date": "2027-01-08",
+      "resolved_to": 1.0,
+      "resolved": true
+    },
+    {
+      "id": "mkt-1",
+      "source": "manifold",
+      "direction": null,
+      "resolution_date": "2027-01-05",
+      "resolved_to": 1.0,
+      "resolved": true
+    },
+    {
+      "id": "mkt-2",
+      "source": "kalshi",
+      "direction": null,
+      "resolution_date": "2027-01-05",
+      "resolved_to": 0.0,
+      "resolved": false
+    },
+    {
+      "id": "ds-1",
+      "source": "acled",
+      "direction": null,
+      "resolution_date": "2027-01-08",
+      "resolved_to": 1.0,
+      "resolved": true
+    },
+    {
+      "id": "ds-1",
+      "source": "acled",
+      "direction": null,
+      "resolution_date": "2027-02-01",
+      "resolved_to": 0.0,
+      "resolved": true
+    },
+    {
+      "id": "ds-2",
+      "source": "acled",
+      "direction": null,
+      "resolution_date": "2027-01-08",
+      "resolved_to": 0.0,
+      "resolved": true
+    }
+  ]
+}
