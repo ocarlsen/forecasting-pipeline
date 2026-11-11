@@ -1,4 +1,4 @@
-"""SHOULD-FIX 8: backtest's (and plan's) set selection either refuses loudly when the user
+"""Backtest's (and plan's) set selection either refuses loudly when the user
 names a set some requested model can't use, or defaults to the intersection of
 cutoff-allowed AND actually-resolved sets.
 """

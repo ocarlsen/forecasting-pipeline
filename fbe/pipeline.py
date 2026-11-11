@@ -80,11 +80,30 @@ class HistoryEntry:
     model_id: str
 
 
+def history_key(e: HistoryEntry) -> tuple:
+    return (e.model_id, e.due_date, e.source, e.id, e.resolution_date)
+
+
+def merge_history(
+    existing: list[HistoryEntry], new: list[HistoryEntry]
+) -> list[HistoryEntry]:
+    """Merge by (model, set, source, question, horizon); a re-run overwrites its earlier rows
+    instead of adding duplicates, so the same round is never double-weighted in a Platt fit."""
+    by_key = {history_key(e): e for e in existing}
+    for e in new:
+        by_key[history_key(e)] = e
+    return list(by_key.values())
+
+
 def append_history(path: Path, entries: list[HistoryEntry]) -> None:
+    """Add entries to the history file, overwriting any earlier row with the same key."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a") as f:
-        for e in entries:
+    merged = merge_history(load_history(path), entries)
+    tmp = path.with_name(path.name + ".tmp")
+    with tmp.open("w") as f:
+        for e in merged:
             f.write(json.dumps(asdict(e)) + "\n")
+    tmp.replace(path)
 
 
 def load_history(path: Path) -> list[HistoryEntry]:
@@ -114,8 +133,9 @@ class TrainingRow:
 
 def leak_free_filter(rows: list[TrainingRow], due_date: dt.date) -> list[TrainingRow]:
     """The one place that enforces prequential training: a row only enters a fit if its
-    outcome was knowable strictly before `due_date`. Dedicated and directly unit-tested --
-    see tests/test_leak_free.py, which fails if this filter is bypassed."""
+    outcome was knowable strictly before `due_date`. The filter itself is unit-tested in
+    tests/test_leak_free.py; that `cmd_backtest` actually calls it is covered by the dry-run
+    CLI test in the same file."""
     return [r for r in rows if r.resolution_date < due_date]
 
 

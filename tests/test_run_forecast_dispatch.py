@@ -1,4 +1,4 @@
-"""SHOULD-FIX 12 / 10: --no-batch must actually select the synchronous path, and
+"""The --no-batch flag must actually select the synchronous path, and
 --resume-batch must resume an existing batch rather than creating a new one."""
 import os
 from unittest.mock import MagicMock

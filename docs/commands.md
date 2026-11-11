@@ -30,7 +30,7 @@ fbe validate out/2026-11-08.ocarlsen.1.json
 | `fbe plan` | `--model` (comma-separated ids) | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch` |
 | `fbe backtest` | `--models` (comma-separated ids), `--max-usd` | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures` |
 | `fbe pick` | `--run` (a backtest run dir) | `--seed` (default 7; shuffles the A/B/C labels) |
-| `fbe live` | `--model`, `--date`, `--org`, `--max-usd` | `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID` |
+| `fbe live` | `--model`, `--date`, `--org`, `--max-usd` | `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID`, `--from-raw RUN_DIR` |
 | `fbe validate` | `FILE` | |
 
 `plan` takes `--model`; `backtest` takes `--models`. Both accept a comma-separated list.
@@ -81,9 +81,10 @@ imputed file anyway.
 
 ## History files
 
-`fbe backtest` and `fbe live` (both without `--dry-run`) append every round's raw forecasts, tagged
-with `model_id`, to `runs/history.jsonl`. `--dry-run` appends to `runs/history.dryrun.jsonl`
-instead, so a rehearsal never pollutes the real calibration history. `fbe live` prints
+`fbe backtest` and `fbe live` (both without `--dry-run`) record every round's raw forecasts, tagged
+with `model_id`, in `runs/history.jsonl`. Rows are keyed by model, set, source, question and
+horizon, so re-running a round replaces its earlier rows instead of duplicating them. `--dry-run`
+writes to `runs/history.dryrun.jsonl` the same way, so a rehearsal never pollutes the real calibration history. `fbe live` prints
 `Platt fit on N market / M dataset rows` plus either the fitted (a, b) or the identity reason.
 
 ## Running live for real
