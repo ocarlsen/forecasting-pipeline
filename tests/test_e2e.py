@@ -71,7 +71,7 @@ def test_live_dry_run_end_to_end_writes_three_valid_files():
     expected_dataset = {"ds-1": {"2027-01-08", "2027-02-01"}, "ds-2": {"2027-01-08"}}
 
     for n, arm in ((1, "raw"), (2, "control"), (3, "platt")):
-        path = cli.OUT_DIR / f"2027-01-01.ocarlsen.{n}.json"
+        path = cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"2027-01-01.ocarlsen.{n}.json"
         assert path.exists()
         data = validate_file(path, expected_market, expected_dataset)
         assert data["model"] == f"claude-haiku-4-5 ({arm})"
@@ -107,7 +107,7 @@ def test_live_refuses_on_mass_failure(monkeypatch):
     )
     with pytest.raises(SystemExit):
         cli.cmd_live(args)
-    assert not (cli.OUT_DIR / "2027-01-01.ocarlsen.1.json").exists()
+    assert not (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / "2027-01-01.ocarlsen.1.json").exists()
     run_dirs = [d for d in cli.RUNS_DIR.iterdir() if d.is_dir()]
     assert any((d / "failures.json").exists() for d in run_dirs)
 

@@ -1,4 +1,4 @@
-"""SHOULD-FIX 7: the control arm's dataset anchor must come from the PUBLIC resolution
+"""The control arm's dataset anchor must come from the PUBLIC resolution
 record, leak-free the same way Platt's training pool is -- a resolution row that resolves on
 or after the target due date must never affect the base rate.
 """

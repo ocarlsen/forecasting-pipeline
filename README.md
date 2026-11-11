@@ -4,7 +4,7 @@ A leak-free LLM forecasting pipeline, built by Owen Carlsen and first entered in
 [ForecastBench](https://www.forecastbench.org/) (Forecasting Research Institute). Every round
 submits three forecast files from the same model, `raw`, `control` and `platt`, so the
 leaderboard itself shows what each step was worth. The model is picked blind, has no web access,
-and is calibrated only on outcomes that had resolved before the round's due date.
+and is calibrated only on outcomes whose `resolution_date` is before the round's due date `D`.
 
 ## How it works
 
@@ -47,6 +47,11 @@ fbe validate out/2026-11-08.ocarlsen.1.json
 `--dry-run` on `backtest` and `live` runs the whole pipeline against a stub model for $0.
 `--max-usd` is required on both. Every flag is in [Commands](docs/commands.md).
 
+`fbe live` saves the model's replies to `runs/<ts>-live-<date>/raw_responses.json` right after the
+call, so a later failure never loses a paid round. `fbe live --from-raw runs/<ts>-live-<date>`
+re-scores those saved replies without calling the model. A `--dry-run` writes its files under
+`out/dryrun/` and never touches a real run's output.
+
 ## Backtest
 
 Eight rounds, 2026-07-05 through 2026-10-11, 150 questions each, three candidates. Total spend
@@ -71,6 +76,11 @@ slightly but measurably worse on dataset questions.
 Caveats: the resolved market questions are the early resolvers; the 180-day and 365-day
 horizons have not resolved yet; this is plain Brier, not FRI's difficulty-adjusted index. The
 full tables, including the other two models, are in [Backtest](docs/backtest.md).
+`runs/` is gitignored, so `scripts/bootstrap.py` needs the output of a local backtest run to
+reproduce the intervals. The model comparison also partly measures recency: Opus 5.5's training
+cutoff (2026-06-30) is about 5 days before the first backtest set (2026-07-05), while Haiku
+4.5's (2025-07-31) is about 11 months before it, so the newer model had seen far more of the
+period leading up to the questions.
 
 ## Nov 8 round: pending
 

@@ -30,7 +30,7 @@ fbe validate out/2026-11-08.ocarlsen.1.json
 | `fbe plan` | `--model` (comma-separated ids) | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch` |
 | `fbe backtest` | `--models` (comma-separated ids), `--max-usd` | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures` |
 | `fbe pick` | `--run` (a backtest run dir) | `--seed` (default 7; shuffles the A/B/C labels) |
-| `fbe live` | `--model`, `--date`, `--org`, `--max-usd` | `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID` |
+| `fbe live` | `--model`, `--date`, `--org`, `--max-usd` | `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID`, `--from-raw RUN_DIR` |
 | `fbe validate` | `FILE` | |
 
 `plan` takes `--model`; `backtest` takes `--models`. Both accept a comma-separated list.

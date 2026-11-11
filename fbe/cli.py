@@ -31,6 +31,8 @@ OUT_DIR = Path("out")
 HISTORY_PATH = RUNS_DIR / "history.jsonl"
 DRYRUN_HISTORY_PATH = RUNS_DIR / "history.dryrun.jsonl"
 
+DRYRUN_OUT_SUBDIR = "dryrun"  # a dry run's stub forecasts never share a path with a real run's
+
 MAX_FAILURE_RATE = 0.02  # refuse to write or score a round whose failure rate is above this
 
 
@@ -157,6 +159,45 @@ def _run_forecast(
     if no_batch:
         return batch_mod.run_sync(client, specs, model)
     return batch_mod.run_batch(client, specs, model, run_dir=run_dir)
+
+
+def _guard_dry_run_path(path: Path, dry_run: bool) -> None:
+    """A dry run may only write under out/dryrun/. Refuse any other target, so a stub-model
+    file can never overwrite a real run's output, whatever path logic changes later."""
+    if not dry_run:
+        return
+    dry_dir = (OUT_DIR / DRYRUN_OUT_SUBDIR).resolve()
+    if dry_dir not in path.resolve().parents:
+        raise SystemExit(
+            f"REFUSED: a --dry-run must not write {path}; dry-run output goes under {dry_dir}"
+        )
+
+
+def _write_raw_responses(path: Path, outcome) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "texts": outcome.texts,
+                "errors": outcome.errors,
+                "stop_reasons": outcome.stop_reasons,
+                "usage": outcome.usage,
+            },
+            indent=2,
+        )
+    )
+
+
+def _load_raw_outcome(run_dir: Path) -> batch_mod.BatchOutcome:
+    path = run_dir / "raw_responses.json"
+    if not path.exists():
+        raise SystemExit(f"REFUSED: {path} not found; --from-raw needs a prior live run's directory")
+    data = json.loads(path.read_text())
+    return batch_mod.BatchOutcome(
+        texts=data.get("texts", {}),
+        errors=data.get("errors", {}),
+        stop_reasons=data.get("stop_reasons", {}),
+        usage=data.get("usage", {}),
+    )
 
 
 def _failure_rate(n_failures: int, n_specs: int) -> float:
@@ -381,7 +422,7 @@ def cmd_backtest(args: argparse.Namespace) -> None:
                 )
                 for row in rows
             ]
-            history.extend(new_entries)
+            history = pipeline.merge_history(history, new_entries)
             pipeline.append_history(history_path, new_entries)
 
         # per-model aggregate across every set actually scored (not skipped/refused).
@@ -480,9 +521,20 @@ def cmd_pick(args: argparse.Namespace) -> None:
 
 
 def cmd_live(args: argparse.Namespace) -> None:
-    due_date = dt.date.fromisoformat(args.date)
+    try:
+        due_date = dt.date.fromisoformat(args.date)
+    except ValueError:
+        print(
+            f"REFUSED: --date {args.date!r} is not a valid ISO date (expected YYYY-MM-DD)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
     model = get_model(args.model)
-    model.allowed_for_backtest(due_date)  # same rule: model must already "exist" for this date
+    try:
+        model.allowed_for_backtest(due_date)  # same rule: model must already "exist" for this date
+    except CutoffUnknownError as e:
+        print(f"REFUSED: {e}", file=sys.stderr)
+        sys.exit(2)
 
     qset = load_question_set(args.date)
     rows, stats = normalize_question_set(qset)
@@ -504,9 +556,17 @@ def cmd_live(args: argparse.Namespace) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
 
     specs = build_call_specs(rows)
-    outcome = _run_forecast(
-        model, specs, args.dry_run, args.seed, args.no_batch, run_dir, args.resume_batch
-    )
+    from_raw = getattr(args, "from_raw", None)
+    if from_raw:
+        outcome = _load_raw_outcome(Path(from_raw))
+        print(f"Re-scoring from {from_raw}/raw_responses.json (no model call)")
+    else:
+        outcome = _run_forecast(
+            model, specs, args.dry_run, args.seed, args.no_batch, run_dir, args.resume_batch
+        )
+    # Persist the paid replies before anything else can fail (base-rate fetch, coverage
+    # check, validation): a later error must never lose a round that was already paid for.
+    _write_raw_responses(run_dir / "raw_responses.json", outcome)
     raw_by_qid, n_failures, failure_reasons = pipeline.forecast_specs(
         specs, outcome.texts, outcome.errors
     )
@@ -554,7 +614,8 @@ def cmd_live(args: argparse.Namespace) -> None:
         if r.kind == "dataset":
             expected_dataset_question_dates.setdefault(r.id, set()).add(r.resolution_date)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = OUT_DIR / DRYRUN_OUT_SUBDIR if args.dry_run else OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
     written = {}
     for arm in ("raw", "control", "platt"):
         frows = [
@@ -567,7 +628,8 @@ def cmd_live(args: argparse.Namespace) -> None:
             )
             for row in rows
         ]
-        path = OUT_DIR / writer.filename_for(args.date, args.org, arm)
+        path = out_dir / writer.filename_for(args.date, args.org, arm)
+        _guard_dry_run_path(path, args.dry_run)
         writer.write_forecast_file(
             path, args.org, args.model, arm,
             qset.get("question_set", f"{args.date}-llm.json"),
@@ -655,6 +717,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--dry-run", action="store_true")
     sp.add_argument("--allow-failures", action="store_true")
     sp.add_argument("--resume-batch", default=None, help="an existing batch id to resume/poll instead of creating a new one")
+    sp.add_argument("--from-raw", default=None, metavar="RUN_DIR", help="re-score from RUN_DIR/raw_responses.json (a prior live run) instead of calling the model")
     sp.set_defaults(func=cmd_live)
 
     sp = sub.add_parser("validate")
