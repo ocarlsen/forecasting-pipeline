@@ -81,9 +81,10 @@ imputed file anyway.
 
 ## History files
 
-`fbe backtest` and `fbe live` (both without `--dry-run`) append every round's raw forecasts, tagged
-with `model_id`, to `runs/history.jsonl`. `--dry-run` appends to `runs/history.dryrun.jsonl`
-instead, so a rehearsal never pollutes the real calibration history. `fbe live` prints
+`fbe backtest` and `fbe live` (both without `--dry-run`) record every round's raw forecasts, tagged
+with `model_id`, in `runs/history.jsonl`. Rows are keyed by model, set, source, question and
+horizon, so re-running a round replaces its earlier rows instead of duplicating them. `--dry-run`
+writes to `runs/history.dryrun.jsonl` the same way, so a rehearsal never pollutes the real calibration history. `fbe live` prints
 `Platt fit on N market / M dataset rows` plus either the fitted (a, b) or the identity reason.
 
 ## Running live for real

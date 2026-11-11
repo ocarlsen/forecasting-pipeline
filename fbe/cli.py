@@ -173,10 +173,13 @@ def _guard_dry_run_path(path: Path, dry_run: bool) -> None:
         )
 
 
-def _write_raw_responses(path: Path, outcome) -> None:
+def _write_raw_responses(path: Path, outcome, dry_run: bool, model_id: str, due_date: str) -> None:
     path.write_text(
         json.dumps(
             {
+                "dry_run": dry_run,
+                "model_id": model_id,
+                "due_date": due_date,
                 "texts": outcome.texts,
                 "errors": outcome.errors,
                 "stop_reasons": outcome.stop_reasons,
@@ -187,11 +190,27 @@ def _write_raw_responses(path: Path, outcome) -> None:
     )
 
 
-def _load_raw_outcome(run_dir: Path) -> batch_mod.BatchOutcome:
+def _load_raw_outcome(
+    run_dir: Path, dry_run: bool, model_id: str, due_date: str
+) -> batch_mod.BatchOutcome:
     path = run_dir / "raw_responses.json"
     if not path.exists():
         raise SystemExit(f"REFUSED: {path} not found; --from-raw needs a prior live run's directory")
     data = json.loads(path.read_text())
+    if not all(k in data for k in ("dry_run", "model_id", "due_date")):
+        raise SystemExit(f"REFUSED: {path} is missing provenance (dry_run, model_id, due_date)")
+    if data["dry_run"] and not dry_run:
+        raise SystemExit(
+            f"REFUSED: {path} holds stub replies from a --dry-run; re-score it only with --dry-run"
+        )
+    if data["model_id"] != model_id:
+        raise SystemExit(
+            f"REFUSED: {path} was produced by {data['model_id']}, not --model {model_id}"
+        )
+    if data["due_date"] != due_date:
+        raise SystemExit(
+            f"REFUSED: {path} is for round {data['due_date']}, not --date {due_date}"
+        )
     return batch_mod.BatchOutcome(
         texts=data.get("texts", {}),
         errors=data.get("errors", {}),
@@ -545,11 +564,12 @@ def cmd_live(args: argparse.Namespace) -> None:
 
     est = estimate_cost(rows, model, use_batch=not args.no_batch)
     print(f"Ceiling: {est.n_calls} calls, ${est.ceiling_usd:.4f}")
-    try:
-        enforce_cap(est, args.max_usd)
-    except CostCapExceededError as e:
-        print(f"REFUSED: {e}", file=sys.stderr)
-        sys.exit(2)
+    if not getattr(args, "from_raw", None):  # a re-score makes no model call, so no cost gate
+        try:
+            enforce_cap(est, args.max_usd)
+        except CostCapExceededError as e:
+            print(f"REFUSED: {e}", file=sys.stderr)
+            sys.exit(2)
 
     ts = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_dir = RUNS_DIR / f"{ts}-live-{args.date}"
@@ -558,7 +578,7 @@ def cmd_live(args: argparse.Namespace) -> None:
     specs = build_call_specs(rows)
     from_raw = getattr(args, "from_raw", None)
     if from_raw:
-        outcome = _load_raw_outcome(Path(from_raw))
+        outcome = _load_raw_outcome(Path(from_raw), args.dry_run, args.model, args.date)
         print(f"Re-scoring from {from_raw}/raw_responses.json (no model call)")
     else:
         outcome = _run_forecast(
@@ -566,7 +586,9 @@ def cmd_live(args: argparse.Namespace) -> None:
         )
     # Persist the paid replies before anything else can fail (base-rate fetch, coverage
     # check, validation): a later error must never lose a round that was already paid for.
-    _write_raw_responses(run_dir / "raw_responses.json", outcome)
+    _write_raw_responses(
+        run_dir / "raw_responses.json", outcome, args.dry_run, args.model, args.date
+    )
     raw_by_qid, n_failures, failure_reasons = pipeline.forecast_specs(
         specs, outcome.texts, outcome.errors
     )

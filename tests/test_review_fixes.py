@@ -78,14 +78,53 @@ def test_from_raw_rescoring_does_not_call_the_model(monkeypatch, capsys):
     monkeypatch.setattr(cli, "_run_forecast", no_model)
     monkeypatch.setattr(batch_mod, "run_stub", no_model)
     monkeypatch.setattr(cli, "_get_client", no_model)
-    import time
-    time.sleep(1.1)  # run dirs are timestamped to the second
+    # run dirs are timestamped to the second: move the first one back in time
+    first = first.rename(first.with_name("20000101T000000Z-live-" + DATE))
     cli.cmd_live(_args(from_raw=str(first)))
     runs = sorted(cli.RUNS_DIR.glob("2*-live-*"))
     assert len(runs) == 2
     assert json.loads((runs[1] / "raw_responses.json").read_text())["texts"] == first_texts
     for n in (1, 2, 3):
         assert (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.exampleorg.{n}.json").exists()
+
+
+def _dry_run_dir():
+    cli.cmd_live(_args())
+    (d,) = list(cli.RUNS_DIR.glob("2*-live-*"))
+    return d
+
+
+def test_from_raw_of_a_dry_run_cannot_overwrite_real_output():
+    d = _dry_run_dir()
+    cli.OUT_DIR.mkdir(exist_ok=True)
+    real = cli.OUT_DIR / f"{DATE}.exampleorg.1.json"
+    real.write_text("REAL")
+    assert not cli.HISTORY_PATH.exists()
+    with pytest.raises(SystemExit, match="REFUSED"):
+        cli.cmd_live(_args(from_raw=str(d), dry_run=False))
+    assert real.read_text() == "REAL"
+    assert not cli.HISTORY_PATH.exists()
+
+
+def test_from_raw_refuses_model_mismatch():
+    d = _dry_run_dir()
+    with pytest.raises(SystemExit, match="REFUSED"):
+        cli.cmd_live(_args(from_raw=str(d), model="claude-sonnet-5"))
+
+
+def test_from_raw_refuses_date_mismatch():
+    d = _dry_run_dir()
+    with pytest.raises(SystemExit, match="REFUSED"):
+        cli.cmd_live(_args(from_raw=str(d), date="2027-02-01"))
+
+
+def test_from_raw_refuses_file_without_provenance():
+    d = _dry_run_dir()
+    data = json.loads((d / "raw_responses.json").read_text())
+    legacy = {k: data[k] for k in ("texts", "errors", "stop_reasons", "usage")}
+    (d / "raw_responses.json").write_text(json.dumps(legacy))
+    with pytest.raises(SystemExit, match="missing provenance"):
+        cli.cmd_live(_args(from_raw=str(d)))
 
 
 def test_from_raw_missing_file_refuses(tmp_path):
@@ -145,3 +184,8 @@ def test_bad_date_refuses_before_any_fetch(monkeypatch, capsys):
         cli.cmd_live(_args(date="2027-13-45"))
     assert ei.value.code not in (0, None)
     assert "REFUSED" in capsys.readouterr().err
+
+
+def test_from_raw_skips_the_cost_cap():
+    d = _dry_run_dir()
+    cli.cmd_live(_args(from_raw=str(d), max_usd=0.0))  # would refuse on cost if the gate ran
