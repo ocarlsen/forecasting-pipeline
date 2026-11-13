@@ -45,12 +45,12 @@ def test_raw_public_control_and_platt_anonymous(capsys):
     raw = _read("OwenCarlsen", 1)
     assert (raw["organization"], raw["model_organization"]) == ("Owen Carlsen", "Anthropic")
     for n in (2, 3):
-        d = _read("Anonymous999", n)
+        d = _read("anonymous-999", n)
         assert d["organization"] == ANON and d["model_organization"] == ANON
     out = capsys.readouterr().out
     assert "model_organization='Anonymous 999'" in out and "model_organization='Anthropic'" in out
     for n in (1, 2, 3):
-        slug = "OwenCarlsen" if n == 1 else "Anonymous999"
+        slug = "OwenCarlsen" if n == 1 else "anonymous-999"
         validate_file(cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.{slug}.{n}.json")
 
 
@@ -59,7 +59,7 @@ def test_public_arm_control_swaps():
     pub = _read("OwenCarlsen", 2)
     assert (pub["organization"], pub["model_organization"]) == ("Owen Carlsen", "Anthropic")
     for n in (1, 3):
-        d = _read("Anonymous999", n)
+        d = _read("anonymous-999", n)
         assert d["organization"] == ANON and d["model_organization"] == ANON
 
 
@@ -68,7 +68,7 @@ def test_anon_slug_override_changes_filenames_only():
     for n in (2, 3):
         d = _read("Anon_999", n)
         assert d["organization"] == ANON and d["model_organization"] == ANON
-    assert not (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.Anonymous999.2.json").exists()
+    assert not (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.anonymous-999.2.json").exists()
 
 
 @pytest.mark.parametrize(
@@ -83,6 +83,13 @@ def test_anon_slug_override_changes_filenames_only():
         dict(anon_slug=""),
         dict(anon_slug="a/b"),
         dict(anon_org="!!!"),
+        # review round 1: near-matches of the public name, padded names, colliding slugs
+        dict(anon_org="owen carlsen"),
+        dict(anon_org="Owen  Carlsen"),
+        dict(anon_org=" Anonymous 999 "),
+        dict(anon_slug="OwenCarlsen"),
+        dict(anon_slug="owencarlsen"),
+        dict(anon_org="Team X"),  # not FRI's "Anonymous N" form and no --anon-slug
     ],
 )
 def test_refusals_happen_before_any_work(over, monkeypatch, capsys):
@@ -110,3 +117,17 @@ def test_writer_model_organization_param_and_default():
     assert d["organization"] == d["model_organization"] == "A"
     assert writer.filename_for(DATE, "Anonymous 999", "platt") == f"{DATE}.Anonymous999.3.json"
     assert writer.filename_for(DATE, "Anonymous 999", "platt", "X_1") == f"{DATE}.X_1.3.json"
+
+
+def test_default_anon_slug_is_fris_documented_form():
+    cli.cmd_live(_args())
+    for n in (2, 3):
+        d = _read("anonymous-999", n)
+        assert d["organization"] == d["model_organization"] == ANON
+    assert not list((cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR).glob(f"{DATE}.Anonymous999.*"))
+
+
+def test_non_fri_anon_org_works_with_explicit_slug():
+    cli.cmd_live(_args(anon_org="Team X", anon_slug="team-x"))
+    d = _read("team-x", 2)
+    assert d["organization"] == d["model_organization"] == "Team X"

@@ -541,6 +541,12 @@ def cmd_pick(args: argparse.Namespace) -> None:
 
 
 _SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+# FRI wiki 6.1: an anonymous team's file is `<due_date>.anonymous-{N}.<i>.json`, fields "Anonymous {N}".
+_FRI_ANON_ORG_RE = re.compile(r"^Anonymous (\d+)$")
+
+
+def _same_name(a: str, b: str) -> bool:
+    return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
 
 
 def _resolve_arm_identities(args: argparse.Namespace) -> dict[str, tuple[str, str, str]]:
@@ -558,16 +564,23 @@ def _resolve_arm_identities(args: argparse.Namespace) -> dict[str, tuple[str, st
             file=sys.stderr,
         )
         sys.exit(2)
-    if anon_org.strip() == args.org.strip():
-        print(f"REFUSED: --anon-org {anon_org!r} equals --org; the anonymous files would be public", file=sys.stderr)
+    if anon_org != " ".join(anon_org.split()):
+        print(f"REFUSED: --anon-org {anon_org!r} has leading, trailing or repeated whitespace", file=sys.stderr)
+        sys.exit(2)
+    if _same_name(anon_org, args.org):
+        print(f"REFUSED: --anon-org {anon_org!r} matches --org; the anonymous files would be public", file=sys.stderr)
         sys.exit(2)
     anon_slug = getattr(args, "anon_slug", None)
     if anon_slug is None:
-        try:
-            anon_slug = writer.filename_slug(anon_org)
-        except writer.ValidationError as e:
-            print(f"REFUSED: {e}; pass --anon-slug", file=sys.stderr)
+        m = _FRI_ANON_ORG_RE.match(anon_org)
+        if not m:
+            print(
+                f"REFUSED: --anon-org {anon_org!r} is not FRI's 'Anonymous N' form, so there is no "
+                "documented filename for it; pass --anon-slug",
+                file=sys.stderr,
+            )
             sys.exit(2)
+        anon_slug = f"anonymous-{m.group(1)}"
     elif not _SLUG_RE.match(anon_slug):
         print(f"REFUSED: --anon-slug {anon_slug!r} must match [A-Za-z0-9_-]+", file=sys.stderr)
         sys.exit(2)
@@ -575,6 +588,9 @@ def _resolve_arm_identities(args: argparse.Namespace) -> dict[str, tuple[str, st
         public_slug = writer.filename_slug(args.org)
     except writer.ValidationError as e:
         print(f"REFUSED: {e}", file=sys.stderr)
+        sys.exit(2)
+    if anon_slug.casefold() == public_slug.casefold():
+        print(f"REFUSED: --anon-slug {anon_slug!r} matches the public filename slug {public_slug!r}", file=sys.stderr)
         sys.exit(2)
     return {
         arm: (args.org, writer.MODEL_ORGANIZATION, public_slug)
@@ -785,7 +801,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--anon-org", default=None,
                     help="REQUIRED: organization AND model_organization for the two non-public arms, e.g. 'Anonymous 999'")
     sp.add_argument("--anon-slug", default=None,
-                    help="filename slug for the anonymous files, [A-Za-z0-9_-]+ (default: --anon-org with other characters removed)")
+                    help="filename slug for the anonymous files, [A-Za-z0-9_-]+ (default: FRI's documented anonymous-N for --anon-org 'Anonymous N')")
     sp.add_argument("--max-usd", type=float, required=True)
     sp.add_argument("--seed", type=int, default=42)
     sp.add_argument("--no-batch", action="store_true")

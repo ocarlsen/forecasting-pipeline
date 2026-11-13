@@ -72,7 +72,7 @@ def test_live_dry_run_end_to_end_writes_three_valid_files():
     expected_dataset = {"ds-1": {"2027-01-08", "2027-02-01"}, "ds-2": {"2027-01-08"}}
 
     for n, arm in ((1, "raw"), (2, "control"), (3, "platt")):
-        slug = "ocarlsen" if arm == "raw" else "Anonymous999"
+        slug = "ocarlsen" if arm == "raw" else "anonymous-999"
         path = cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"2027-01-01.{slug}.{n}.json"
         assert path.exists()
         data = validate_file(path, expected_market, expected_dataset)

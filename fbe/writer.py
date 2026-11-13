@@ -1,7 +1,7 @@
 """Write and validate the three forecast files (raw / control / platt).
 
-Filename: `<due_date>.<organization>.<n>.json`, n in {1,2,3} for raw/control/platt
-respectively. `model` field is `"<model-id> (raw|control|platt)"`. Each file must be
+Filename: `<due_date>.<slug>.<n>.json`, n in {1,2,3} for raw/control/platt
+respectively; the slug is the organization's (or, for an anonymous arm, `anonymous-N`). `model` field is `"<model-id> (raw|control|platt)"`. Each file must be
 >=95% covered for BOTH market and dataset questions (a dataset question counts covered
 only when every one of its resolution_dates has a row) or writing refuses.
 """

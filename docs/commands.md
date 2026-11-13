@@ -22,7 +22,7 @@ fbe pick --run runs/20261028T002210Z                         # reads that backte
 fbe live --model claude-haiku-4-5 --date 2026-11-08 \
          --org ocarlsen --anon-org "Anonymous 999" \
          --max-usd 60                                        # writes out/<date>.ocarlsen.1.json (public raw)
-                                                             # + out/<date>.Anonymous999.{2,3}.json
+                                                             # + out/<date>.anonymous-999.{2,3}.json
 fbe validate out/2026-11-08.ocarlsen.1.json
 ```
 
