@@ -6,6 +6,7 @@ import datetime as dt
 import json
 import os
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -539,6 +540,50 @@ def cmd_pick(args: argparse.Namespace) -> None:
     )
 
 
+_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _resolve_arm_identities(args: argparse.Namespace) -> dict[str, tuple[str, str, str]]:
+    """arm -> (organization, model_organization, filename slug). FRI allows at most one public
+    file per round: the --public-arm file carries --org; every other arm is anonymous."""
+    public_arm = getattr(args, "public_arm", None) or "raw"
+    anon_org = getattr(args, "anon_org", None)
+    if public_arm not in writer.ARM_FILE_NUMBER:
+        print(f"REFUSED: --public-arm {public_arm!r} must be one of raw, control, platt", file=sys.stderr)
+        sys.exit(2)
+    if anon_org is None or not anon_org.strip():
+        print(
+            "REFUSED: --anon-org is required (FRI allows at most one public file per round; "
+            "the other two must be anonymous) and must not be blank",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if anon_org.strip() == args.org.strip():
+        print(f"REFUSED: --anon-org {anon_org!r} equals --org; the anonymous files would be public", file=sys.stderr)
+        sys.exit(2)
+    anon_slug = getattr(args, "anon_slug", None)
+    if anon_slug is None:
+        try:
+            anon_slug = writer.filename_slug(anon_org)
+        except writer.ValidationError as e:
+            print(f"REFUSED: {e}; pass --anon-slug", file=sys.stderr)
+            sys.exit(2)
+    elif not _SLUG_RE.match(anon_slug):
+        print(f"REFUSED: --anon-slug {anon_slug!r} must match [A-Za-z0-9_-]+", file=sys.stderr)
+        sys.exit(2)
+    try:
+        public_slug = writer.filename_slug(args.org)
+    except writer.ValidationError as e:
+        print(f"REFUSED: {e}", file=sys.stderr)
+        sys.exit(2)
+    return {
+        arm: (args.org, writer.MODEL_ORGANIZATION, public_slug)
+        if arm == public_arm
+        else (anon_org, anon_org, anon_slug)
+        for arm in writer.ARM_FILE_NUMBER
+    }
+
+
 def cmd_live(args: argparse.Namespace) -> None:
     try:
         due_date = dt.date.fromisoformat(args.date)
@@ -548,6 +593,7 @@ def cmd_live(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
         sys.exit(2)
+    arm_orgs = _resolve_arm_identities(args)  # refuses before any fetch, model call or cost
     model = get_model(args.model)
     try:
         model.allowed_for_backtest(due_date)  # same rule: model must already "exist" for this date
@@ -650,16 +696,17 @@ def cmd_live(args: argparse.Namespace) -> None:
             )
             for row in rows
         ]
-        path = out_dir / writer.filename_for(args.date, args.org, arm)
+        org, model_org, slug = arm_orgs[arm]
+        path = out_dir / writer.filename_for(args.date, org, arm, slug)
         _guard_dry_run_path(path, args.dry_run)
         writer.write_forecast_file(
-            path, args.org, args.model, arm,
+            path, org, args.model, arm,
             qset.get("question_set", f"{args.date}-llm.json"),
-            frows, expected_market_ids, expected_dataset_question_dates,
+            frows, expected_market_ids, expected_dataset_question_dates, model_org,
         )
         writer.validate_file(path, expected_market_ids, expected_dataset_question_dates)
         written[arm] = str(path)
-        print(f"Wrote + validated {path}")
+        print(f"Wrote + validated {path} (organization={org!r}, model_organization={model_org!r})")
 
     # Never pollute the real history with a dry run; every entry carries its model_id.
     history_path = DRYRUN_HISTORY_PATH if args.dry_run else HISTORY_PATH
@@ -733,6 +780,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--model", required=True)
     sp.add_argument("--date", required=True)
     sp.add_argument("--org", required=True)
+    sp.add_argument("--public-arm", choices=sorted(writer.ARM_FILE_NUMBER), default="raw",
+                    help="the one arm whose file is public (organization=--org, model_organization=Anthropic); default raw")
+    sp.add_argument("--anon-org", default=None,
+                    help="REQUIRED: organization AND model_organization for the two non-public arms, e.g. 'Anonymous 999'")
+    sp.add_argument("--anon-slug", default=None,
+                    help="filename slug for the anonymous files, [A-Za-z0-9_-]+ (default: --anon-org with other characters removed)")
     sp.add_argument("--max-usd", type=float, required=True)
     sp.add_argument("--seed", type=int, default=42)
     sp.add_argument("--no-batch", action="store_true")

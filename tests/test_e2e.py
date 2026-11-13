@@ -58,6 +58,7 @@ def test_live_dry_run_end_to_end_writes_three_valid_files():
         model="claude-haiku-4-5",
         date="2027-01-01",
         org="ocarlsen",
+        anon_org="Anonymous 999",
         max_usd=1000.0,
         seed=1,
         no_batch=False,
@@ -71,7 +72,8 @@ def test_live_dry_run_end_to_end_writes_three_valid_files():
     expected_dataset = {"ds-1": {"2027-01-08", "2027-02-01"}, "ds-2": {"2027-01-08"}}
 
     for n, arm in ((1, "raw"), (2, "control"), (3, "platt")):
-        path = cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"2027-01-01.ocarlsen.{n}.json"
+        slug = "ocarlsen" if arm == "raw" else "Anonymous999"
+        path = cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"2027-01-01.{slug}.{n}.json"
         assert path.exists()
         data = validate_file(path, expected_market, expected_dataset)
         assert data["model"] == f"claude-haiku-4-5 ({arm})"
@@ -98,6 +100,7 @@ def test_live_refuses_on_mass_failure(monkeypatch):
         model="claude-haiku-4-5",
         date="2027-01-01",
         org="ocarlsen",
+        anon_org="Anonymous 999",
         max_usd=1000.0,
         seed=1,
         no_batch=False,
