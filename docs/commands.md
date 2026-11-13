@@ -20,7 +20,9 @@ fbe backtest --models claude-haiku-4-5,claude-sonnet-5,claude-opus-5-5 \
              --sets 2026-09-27,2026-10-11 --sample 50 --max-usd 5 --dry-run
 fbe pick --run runs/20261028T002210Z                         # reads that backtest's scores.json
 fbe live --model claude-haiku-4-5 --date 2026-11-08 \
-         --org ocarlsen --max-usd 60                         # writes out/<date>.<org>.{1,2,3}.json
+         --org ocarlsen --anon-org "Anonymous 999" \
+         --max-usd 60                                        # writes out/<date>.ocarlsen.1.json (public raw)
+                                                             # + out/<date>.anonymous-999.{2,3}.json
 fbe validate out/2026-11-08.ocarlsen.1.json
 ```
 
@@ -30,7 +32,7 @@ fbe validate out/2026-11-08.ocarlsen.1.json
 | `fbe plan` | `--model` (comma-separated ids) | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch` |
 | `fbe backtest` | `--models` (comma-separated ids), `--max-usd` | `--sets`, `--sample N`, `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures` |
 | `fbe pick` | `--run` (a backtest run dir) | `--seed` (default 7; shuffles the A/B/C labels) |
-| `fbe live` | `--model`, `--date`, `--org`, `--max-usd` | `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID`, `--from-raw RUN_DIR` |
+| `fbe live` | `--model`, `--date`, `--org`, `--anon-org`, `--max-usd` | `--public-arm` (default `raw`), `--anon-slug SLUG`, `--seed` (default 42), `--no-batch`, `--dry-run`, `--allow-failures`, `--resume-batch ID`, `--from-raw RUN_DIR` |
 | `fbe validate` | `FILE` | |
 
 `plan` takes `--model`; `backtest` takes `--models`. Both accept a comma-separated list.
@@ -91,7 +93,11 @@ writes to `runs/history.dryrun.jsonl` the same way, so a rehearsal never pollute
 
 1. `fbe plan ...` first. It is free and prints the ceiling before anything else runs.
 2. `export ANTHROPIC_API_KEY=...` (never committed, never read from a file).
-3. `fbe live --model <id> --date <due-date> --org <name> --max-usd <cap>`. It refuses to start if
+3. `fbe live --model <id> --date <due-date> --org <name> --anon-org <anonymous name> --max-usd <cap>`.
+   FRI allows one public file per team per round. The `--public-arm` file (default `raw`) gets
+   `organization` `<name>` and `model_organization` `Anthropic`; the other two get the anonymous
+   name in both fields, and `--anon-slug` sets their filename slug if FRI asks for a specific one.
+   It refuses to start without `--anon-org`, and refuses if
    the ceiling exceeds `--max-usd`, refuses to write if more than 2% of calls failed, otherwise
    writes and validates the three files under `out/` and appends the round's raw forecasts to
    `runs/history.jsonl` for the next round's Platt fit.

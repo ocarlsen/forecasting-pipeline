@@ -25,7 +25,7 @@ def _offline(monkeypatch, question_set, resolution_set, tmp_path):
 
 def _args(**over):
     base = dict(
-        model="claude-haiku-4-5", date=DATE, org="exampleorg", max_usd=1000.0, seed=1,
+        model="claude-haiku-4-5", date=DATE, org="exampleorg", anon_org="Anonymous 999", max_usd=1000.0, seed=1,
         no_batch=False, dry_run=True, allow_failures=False, resume_batch=None, from_raw=None,
     )
     base.update(over)
@@ -41,8 +41,10 @@ def test_dry_run_never_touches_a_real_runs_output():
     cli.cmd_live(_args())
     assert real.read_text() == "REAL"
     for n in (1, 2, 3):
-        assert (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.exampleorg.{n}.json").exists()
+        slug = "exampleorg" if n == 1 else "anonymous-999"
+        assert (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.{slug}.{n}.json").exists()
     assert not (cli.OUT_DIR / f"{DATE}.exampleorg.2.json").exists()
+    assert not (cli.OUT_DIR / f"{DATE}.anonymous-999.2.json").exists()
 
 
 def test_dry_run_guard_refuses_any_path_outside_the_dryrun_dir():
@@ -85,7 +87,8 @@ def test_from_raw_rescoring_does_not_call_the_model(monkeypatch, capsys):
     assert len(runs) == 2
     assert json.loads((runs[1] / "raw_responses.json").read_text())["texts"] == first_texts
     for n in (1, 2, 3):
-        assert (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.exampleorg.{n}.json").exists()
+        slug = "exampleorg" if n == 1 else "anonymous-999"
+        assert (cli.OUT_DIR / cli.DRYRUN_OUT_SUBDIR / f"{DATE}.{slug}.{n}.json").exists()
 
 
 def _dry_run_dir():

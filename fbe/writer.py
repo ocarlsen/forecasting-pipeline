@@ -1,7 +1,7 @@
 """Write and validate the three forecast files (raw / control / platt).
 
-Filename: `<due_date>.<organization>.<n>.json`, n in {1,2,3} for raw/control/platt
-respectively. `model` field is `"<model-id> (raw|control|platt)"`. Each file must be
+Filename: `<due_date>.<slug>.<n>.json`, n in {1,2,3} for raw/control/platt
+respectively; the slug is the organization's (or, for an anonymous arm, `anonymous-N`). `model` field is `"<model-id> (raw|control|platt)"`. Each file must be
 >=95% covered for BOTH market and dataset questions (a dataset question counts covered
 only when every one of its resolution_dates has a row) or writing refuses.
 """
@@ -42,11 +42,12 @@ def build_file_dict(
     arm: str,
     question_set_filename: str,
     rows: list[ForecastRow],
+    model_organization: str = MODEL_ORGANIZATION,
 ) -> dict:
     return {
         "organization": organization,
         "model": f"{model_id} ({arm})",
-        "model_organization": MODEL_ORGANIZATION,
+        "model_organization": model_organization,
         "question_set": question_set_filename,
         "forecasts": [
             {
@@ -72,8 +73,10 @@ def filename_slug(organization: str) -> str:
     return slug
 
 
-def filename_for(due_date: str, organization: str, arm: str) -> str:
-    return f"{due_date}.{filename_slug(organization)}.{ARM_FILE_NUMBER[arm]}.json"
+def filename_for(due_date: str, organization: str, arm: str, slug: str | None = None) -> str:
+    """`slug` overrides the filename slug derived from `organization` (used for the
+    anonymous arms, whose filename slug is configurable)."""
+    return f"{due_date}.{slug or filename_slug(organization)}.{ARM_FILE_NUMBER[arm]}.json"
 
 
 def compute_coverage(
@@ -157,10 +160,13 @@ def write_forecast_file(
     rows: list[ForecastRow],
     expected_market_ids: set[str],
     expected_dataset_question_dates: dict[str, set[str]],
+    model_organization: str = MODEL_ORGANIZATION,
 ) -> dict:
     """Builds, coverage-checks, schema-checks, and writes one forecast file. Raises
     ValidationError/CoverageError and writes nothing if any check fails."""
-    data = build_file_dict(organization, model_id, arm, question_set_filename, rows)
+    data = build_file_dict(
+        organization, model_id, arm, question_set_filename, rows, model_organization
+    )
     validate_schema(data)
     validate_coverage(data, expected_market_ids, expected_dataset_question_dates)
     validate_filename(path)

@@ -2,9 +2,10 @@
 
 A leak-free LLM forecasting pipeline, built by Owen Carlsen and first entered in
 [ForecastBench](https://www.forecastbench.org/) (Forecasting Research Institute). Every round
-submits three forecast files from the same model, `raw`, `control` and `platt`, so the
-leaderboard itself shows what each step was worth. The model is picked blind, has no web access,
-and is calibrated only on outcomes whose `resolution_date` is before the round's due date `D`.
+submits three forecast files from the same model, `raw`, `control` and `platt`, and FRI scores
+each one. Only `raw` is public, under Owen Carlsen. FRI allows one public file per team per
+round, so `control` and `platt` go in under an anonymous name. The model is picked blind, has no
+web access, and is calibrated only on outcomes whose `resolution_date` is before the round's due date `D`.
 
 ## How it works
 
@@ -40,7 +41,8 @@ export ANTHROPIC_API_KEY=...   # only read from the env; never from a .env file
 fbe plan --model claude-haiku-4-5,claude-sonnet-5,claude-opus-5-5 --sample 150
 fbe backtest --models claude-haiku-4-5,claude-sonnet-5,claude-opus-5-5 --sample 150 --max-usd 20
 fbe pick --run runs/<timestamp>
-fbe live --model claude-opus-5-5 --date 2026-11-08 --org ocarlsen --max-usd 60
+fbe live --model claude-opus-5-5 --date 2026-11-08 --org ocarlsen \
+         --anon-org "Anonymous 999" --max-usd 60
 fbe validate out/2026-11-08.ocarlsen.1.json
 ```
 
