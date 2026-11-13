@@ -90,6 +90,7 @@ def test_anon_slug_override_changes_filenames_only():
         dict(anon_slug="OwenCarlsen"),
         dict(anon_slug="owencarlsen"),
         dict(anon_org="Team X"),  # not FRI's "Anonymous N" form and no --anon-slug
+        dict(anon_org="Anonymous \u0663"),  # a non-ASCII digit: must refuse before any cost
     ],
 )
 def test_refusals_happen_before_any_work(over, monkeypatch, capsys):

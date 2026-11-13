@@ -542,7 +542,7 @@ def cmd_pick(args: argparse.Namespace) -> None:
 
 _SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 # FRI wiki 6.1: an anonymous team's file is `<due_date>.anonymous-{N}.<i>.json`, fields "Anonymous {N}".
-_FRI_ANON_ORG_RE = re.compile(r"^Anonymous (\d+)$")
+_FRI_ANON_ORG_RE = re.compile(r"^Anonymous ([0-9]+)$")  # ASCII only: \d matches any Unicode digit
 
 
 def _same_name(a: str, b: str) -> bool:
