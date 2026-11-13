@@ -96,7 +96,8 @@ writes to `runs/history.dryrun.jsonl` the same way, so a rehearsal never pollute
 3. `fbe live --model <id> --date <due-date> --org <name> --anon-org <anonymous name> --max-usd <cap>`.
    FRI allows one public file per team per round. The `--public-arm` file (default `raw`) gets
    `organization` `<name>` and `model_organization` `Anthropic`; the other two get the anonymous
-   name in both fields, and `--anon-slug` sets their filename slug if FRI asks for a specific one.
+   name in both fields. Their filename slug defaults to FRI's documented `anonymous-N` when the
+   anonymous name is `Anonymous N`; `--anon-slug` overrides it and is required for any other name.
    It refuses to start without `--anon-org`, and refuses if
    the ceiling exceeds `--max-usd`, refuses to write if more than 2% of calls failed, otherwise
    writes and validates the three files under `out/` and appends the round's raw forecasts to
