@@ -53,8 +53,8 @@ move together, 4,000 draws). Difference in Brier, negative means the first arm i
 | dataset, n=1139 | control minus raw | +0.0028 | +0.0008 to +0.0047 |
 
 So calibration was worth about zero, because Opus 5.5 was already calibrated on these rows. On
-market questions the prompt shows the model the market price, and on these 196 rows I can't tell
-the raw arm from copying that price. The control is measurably worse on
+market questions the prompt shows the model the market price, and on these 196 rows the raw arm
+can't be told from copying that price. The control is measurably worse on
 dataset questions: the public base rates it blends toward did not hold in these rounds.
 
 The blind pick holds on the same rows: Opus 5.5 beats Sonnet 5 by 0.037 (market) and 0.008
