@@ -72,7 +72,8 @@ Opus 5.5 by question type (lower is better):
 A paired bootstrap ([`scripts/bootstrap.py`](scripts/bootstrap.py)) puts Platt minus raw on
 dataset questions at +0.0005 (95% interval -0.0011 to +0.0021) and raw minus copy-the-market on
 market questions at -0.0035 (-0.0074 to +0.0003). Calibration was worth about zero because Opus
-5.5 was already calibrated, and on market questions it ties copying the price. The control is
+5.5 was already calibrated. On market questions the prompt shows the model the market price, and
+on these 196 rows I can't tell its forecasts from copying that price. The control is
 slightly but measurably worse on dataset questions.
 
 Caveats: the resolved market questions are the early resolvers; the 180-day and 365-day
